@@ -205,3 +205,27 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# === MLOps & Experiment Tracking ===
+mlruns/                # MLflow local tracking
+mlflow.db              # Legacy SQLite database
+mlartifacts/           # MLflow artifacts
+.artifacts/
+
+# === Pipeline Output & Artifacts ===
+artifact/              # Pipeline execution output
+artifacts/             # Extra artifacts
+data/                  # Raw or processed datasets
+*.csv                  # Exclude all data files
+*.pkl                  # Pickled models/preprocessors
+*.npy                  # Transformed numpy arrays
+*.log                  # Execution logs
+
+# === IDE & Local Settings ===
+.idea/
+.vscode/
+.env                   # Sensitive configuration
+.anaconda/
+.ipynb_checkpoints/
+src.egg-info/
+build/
+dist/

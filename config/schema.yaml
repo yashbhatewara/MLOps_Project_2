@@ -1,0 +1,60 @@
+columns:
+  Rent: float
+  Frequency: category
+  Area_in_sqft: float
+  Beds: int
+  Baths: int
+  Type: category
+  Location: category
+  City: category
+  Furnishing: category
+  Address: category
+  Posted_date: category
+  Purpose: category
+  Rent_per_sqft: float
+  Rent_category: category
+  Monthly_Rent: float
+  Sqft_per_bed: float
+  Total_Rooms: int
+  is_high_rise: int
+
+numerical_columns:
+  - Area_in_sqft
+  - Beds
+  - Baths
+  - Sqft_per_bed
+  - Total_Rooms
+  - is_high_rise
+  - Monthly_Rent
+
+categorical_columns:
+  - Frequency
+  - Type
+  - Location
+  - City
+  - Furnishing
+
+drop_columns:
+  - Rent
+  - Address
+  - Posted_date
+  - Purpose
+  - Rent_per_sqft
+  - Rent_category
+
+# ---------------- Data Transformation ----------------
+
+# Apply StandardScaler
+num_features:
+  - Area_in_sqft
+  - Sqft_per_bed
+  - Total_Rooms
+
+# No MinMax used in your notebook (everything was scaled together)
+mm_columns: []
+
+# Columns that pass through (since you used target encoding before scaling)
+passthrough_columns:
+  - Beds
+  - Baths
+  - is_high_rise

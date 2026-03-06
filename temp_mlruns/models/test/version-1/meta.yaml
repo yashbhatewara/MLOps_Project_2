@@ -1,0 +1,15 @@
+creation_timestamp: 1772716909232
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1772716909232
+model_id: m-77080334e72845a0a85c90f5220efdb6
+name: test
+run_id: 7c88b3d640db473086f903ae76101a07
+run_link: null
+source: models:/m-77080334e72845a0a85c90f5220efdb6
+status: READY
+status_message: null
+storage_location: file:///C:/Users/yash2/OneDrive/Desktop/MLOps/MLOps_Project_2/temp_mlruns/682092487170586959/models/m-77080334e72845a0a85c90f5220efdb6/artifacts
+user_id: null
+version: 1

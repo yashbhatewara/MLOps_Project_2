@@ -1,0 +1,103 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f6f9;
+}
+
+.hero {
+    background: linear-gradient(135deg, #003973, #005aa7);
+    color: white;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.hero h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.hero p {
+    margin-top: 10px;
+    opacity: 0.9;
+}
+
+.card {
+    max-width: 600px;
+    margin: -30px auto 40px;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #333;
+}
+
+input, select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+input:focus, select:focus {
+    border-color: #005aa7;
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 90, 167, 0.4);
+}
+
+.primary-btn {
+    padding: 12px;
+    background: #005aa7;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.primary-btn:hover {
+    background: #003973;
+}
+
+.result-card {
+    margin-top: 25px;
+    padding: 20px;
+    border-radius: 10px;
+    background: #f0f6ff;
+    text-align: center;
+}
+
+.result-card h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.rent-value {
+    margin-top: 10px;
+    font-size: 26px;
+    font-weight: bold;
+    color: #005aa7;
+}

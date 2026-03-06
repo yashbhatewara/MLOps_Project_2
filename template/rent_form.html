@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Abu Dhabi Rent Estimator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <div class="hero">
+        <h1>Abu Dhabi Rent Estimator</h1>
+        <p>Estimate your monthly rental value instantly using AI</p>
+    </div>
+
+    <div class="card">
+
+        <form method="post">
+
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" name="Location" id="Location" list="location-list" placeholder="e.g. Dubai Marina"
+                    autocomplete="off">
+                <datalist id="location-list">
+                    <option value="Al Reem Island">
+                    <option value="Jumeirah Village Circle (JVC)">
+                    <option value="Khalifa City">
+                    <option value="Downtown Dubai">
+                    <option value="Dubai Marina">
+                    <option value="Business Bay">
+                    <option value="Muwailih Commercial">
+                    <option value="Mohammed Bin Zayed City">
+                    <option value="Al Raha Beach">
+                    <option value="Dubai Creek Harbour">
+                    <option value="Meydan City">
+                    <option value="Muwaileh">
+                    <option value="Palm Jumeirah">
+                    <option value="Yas Island">
+                    <option value="Al Nahda (Sharjah)">
+                    <option value="Al Taawun">
+                    <option value="Al Khalidiyah">
+                    <option value="Dubai Hills Estate">
+                    <option value="Mohammed Bin Rashid City">
+                    <option value="Dubailand">
+                    <option value="Aljada">
+                    <option value="Jumeirah Beach Residence (JBR)">
+                    <option value="Al Nuaimiya">
+                    <option value="Corniche Area">
+                    <option value="Al Shamkha">
+                    <option value="Madinat Al Riyadh">
+                    <option value="Al Yasmeen">
+                    <option value="Al Rawda">
+                    <option value="Al Majaz">
+                    <option value="Town Square">
+                    <option value="Al Rawdah">
+                    <option value="Al Reef">
+                    <option value="Barsha Heights (Tecom)">
+                    <option value="Jumeirah Park">
+                    <option value="DAMAC Hills 2 (Akoya by DAMAC)">
+                    <option value="Al Raha Gardens">
+                    <option value="Sobha Hartland">
+                    <option value="Al Hamidiyah">
+                    <option value="Jumeirah">
+                    <option value="Al Qasimia">
+                    <option value="Al Matar">
+                    <option value="Emirates City">
+                    <option value="Al Helio">
+                    <option value="Al Jimi">
+                    <option value="Muwaileh">
+                    <option value="Al Falah Street">
+                    <option value="Al Rahba">
+                    <option value="Mohammed Bin Rashid City">
+                </datalist>
+            </div>
+
+            <div class="form-group">
+                <label>Property Size (Sqft)</label>
+                <input type="number" step="0.01" name="Area_in_sqft" placeholder="e.g. 1200" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Bedrooms</label>
+                    <input type="number" name="Beds" placeholder="e.g. 2" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Bathrooms</label>
+                    <input type="number" name="Baths" placeholder="e.g. 2" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Building Type</label>
+                <select name="is_high_rise" required>
+                    <option value="1">High Rise</option>
+                    <option value="0">Low Rise</option>
+                </select>
+            </div>
+
+            <button type="submit" class="primary-btn">Estimate Rent</button>
+
+        </form>
+
+        {% if prediction %}
+        <div class="result-card">
+            <h2>Estimated Monthly Rent</h2>
+            <div class="rent-value">{{ prediction }}</div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        // Auto-compute hidden fields before submit
+        document.querySelector("form").addEventListener("submit", function () {
+            const area = parseFloat(document.querySelector("[name='Area_in_sqft']").value) || 0;
+            const beds = parseInt(document.querySelector("[name='Beds']").value) || 1;
+            const baths = parseInt(document.querySelector("[name='Baths']").value) || 0;
+
+            let sqftInput = document.querySelector("[name='Sqft_per_bed']");
+            let roomsInput = document.querySelector("[name='Total_Rooms']");
+
+            if (!sqftInput) {
+                sqftInput = document.createElement("input");
+                sqftInput.type = "hidden";
+                sqftInput.name = "Sqft_per_bed";
+                this.appendChild(sqftInput);
+            }
+            if (!roomsInput) {
+                roomsInput = document.createElement("input");
+                roomsInput.type = "hidden";
+                roomsInput.name = "Total_Rooms";
+                this.appendChild(roomsInput);
+            }
+
+            sqftInput.value = (area / Math.max(beds, 1)).toFixed(2);
+            roomsInput.value = beds + baths;
+        });
+    </script>
+
+</body>
+
+</html>

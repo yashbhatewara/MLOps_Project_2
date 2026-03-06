@@ -1,0 +1,10 @@
+artifact_location: file:///C:/Users/yash2/OneDrive/Desktop/MLOps/MLOps_Project_2/temp_mlruns/682092487170586959/models/m-77080334e72845a0a85c90f5220efdb6/artifacts
+creation_timestamp: 1772716894666
+experiment_id: '682092487170586959'
+last_updated_timestamp: 1772716909199
+model_id: m-77080334e72845a0a85c90f5220efdb6
+model_type: null
+name: model
+source_run_id: 7c88b3d640db473086f903ae76101a07
+status: 2
+status_message: null

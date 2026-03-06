@@ -1,0 +1,31 @@
+Requirement already satisfied: ipython in c:\users\yash2\appdata\roaming\python\python314\site-packages (9.9.0)
+Collecting nbformat
+  Using cached nbformat-5.10.4-py3-none-any.whl.metadata (3.6 kB)
+Requirement already satisfied: colorama>=0.4.4 in c:\users\yash2\appdata\local\programs\python\python314\lib\site-packages (from ipython) (0.4.6)
+Requirement already satisfied: decorator>=4.3.2 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from ipython) (5.2.1)
+Requirement already satisfied: ipython-pygments-lexers>=1.0.0 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from ipython) (1.1.1)
+Requirement already satisfied: jedi>=0.18.1 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from ipython) (0.19.2)
+Requirement already satisfied: matplotlib-inline>=0.1.5 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from ipython) (0.2.1)
+Requirement already satisfied: prompt_toolkit<3.1.0,>=3.0.41 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from ipython) (3.0.52)
+Requirement already satisfied: pygments>=2.11.0 in c:\users\yash2\appdata\local\programs\python\python314\lib\site-packages (from ipython) (2.19.2)
+Requirement already satisfied: stack_data>=0.6.0 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from ipython) (0.6.3)
+Requirement already satisfied: traitlets>=5.13.0 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from ipython) (5.14.3)
+Requirement already satisfied: wcwidth in c:\users\yash2\appdata\roaming\python\python314\site-packages (from prompt_toolkit<3.1.0,>=3.0.41->ipython) (0.2.14)
+Collecting fastjsonschema>=2.15 (from nbformat)
+  Using cached fastjsonschema-2.21.2-py3-none-any.whl.metadata (2.3 kB)
+Requirement already satisfied: jsonschema>=2.6 in c:\users\yash2\appdata\local\programs\python\python314\lib\site-packages (from nbformat) (4.25.1)
+Requirement already satisfied: jupyter-core!=5.0.*,>=4.12 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from nbformat) (5.9.1)
+Requirement already satisfied: parso<0.9.0,>=0.8.4 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from jedi>=0.18.1->ipython) (0.8.5)
+Requirement already satisfied: attrs>=22.2.0 in c:\users\yash2\appdata\local\programs\python\python314\lib\site-packages (from jsonschema>=2.6->nbformat) (25.4.0)
+Requirement already satisfied: jsonschema-specifications>=2023.03.6 in c:\users\yash2\appdata\local\programs\python\python314\lib\site-packages (from jsonschema>=2.6->nbformat) (2025.9.1)
+Requirement already satisfied: referencing>=0.28.4 in c:\users\yash2\appdata\local\programs\python\python314\lib\site-packages (from jsonschema>=2.6->nbformat) (0.37.0)
+Requirement already satisfied: rpds-py>=0.7.1 in c:\users\yash2\appdata\local\programs\python\python314\lib\site-packages (from jsonschema>=2.6->nbformat) (0.30.0)
+Requirement already satisfied: platformdirs>=2.5 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from jupyter-core!=5.0.*,>=4.12->nbformat) (4.5.1)
+Requirement already satisfied: executing>=1.2.0 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from stack_data>=0.6.0->ipython) (2.2.1)
+Requirement already satisfied: asttokens>=2.1.0 in c:\users\yash2\appdata\roaming\python\python314\site-packages (from stack_data>=0.6.0->ipython) (3.0.1)
+Requirement already satisfied: pure-eval in c:\users\yash2\appdata\roaming\python\python314\site-packages (from stack_data>=0.6.0->ipython) (0.2.3)
+Using cached nbformat-5.10.4-py3-none-any.whl (78 kB)
+Using cached fastjsonschema-2.21.2-py3-none-any.whl (24 kB)
+Installing collected packages: fastjsonschema, nbformat
+   -------------------- ------------------- 1/2 [nbformat]   -------------------- ------------------- 1/2 [nbformat]   ---------------------------------------- 2/2 [nbformat]
+Successfully installed fastjsonschema-2.21.2 nbformat-5.10.4

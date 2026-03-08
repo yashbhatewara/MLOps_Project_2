@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 import os
 
 import mlflow
-import dagshub
+import threading
 dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=True)
 
 def download_model():
@@ -58,8 +58,9 @@ def download_model():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Download model if missing
-    download_model()
+    # Startup: Download model in background to avoid port scan timeout
+    thread = threading.Thread(target=download_model)
+    thread.start()
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -140,6 +141,9 @@ async def predict(request: Request):
 
     except Exception as e:
         import traceback
+        error_msg = str(e)
+        if "No such file or directory" in error_msg and "model.pkl" in error_msg:
+            return {"error": "Model is still downloading from DagsHub. Please wait a minute and refresh the page."}
         return {"error": f"Error occurred in python script: [{e}]", "traceback": traceback.format_exc()}
 
 

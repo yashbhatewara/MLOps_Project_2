@@ -3,5 +3,7 @@ services:
     name: mlops-project-2
     runtime: docker
     envVars:
+      - key: PORT
+        value: 8000
       - key: APP_HOST
         value: 0.0.0.0

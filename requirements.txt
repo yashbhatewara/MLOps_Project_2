@@ -21,4 +21,7 @@ imblearn
 lightgbm==4.1.0
 xgboost
 mlflow
+dagshub
+gunicorn
+python-dotenv
 -e .

@@ -8,15 +8,61 @@ from fastapi.responses import RedirectResponse
 
 from typing import Optional
 
-from src.constants import APP_HOST, APP_PORT
+from src.constants import APP_HOST, APP_PORT, SAVED_MODEL_FILE_PATH, SAVED_MODEL_DIR_NAME, MLFLOW_EXPERIMENT_NAME
 from src.pipeline.prediction_pipeline import PropertyData, PropertyPredictor
 from src.pipeline.training_pipeline import TrainPipeline
+from contextlib import asynccontextmanager
+import os
 
 import mlflow
 import dagshub
 dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=True)
 
-app = FastAPI()
+def download_model():
+    if not os.path.exists(SAVED_MODEL_FILE_PATH):
+        print(f"Model not found at {SAVED_MODEL_FILE_PATH}. Attempting download from DagsHub...")
+        os.makedirs(SAVED_MODEL_DIR_NAME, exist_ok=True)
+        try:
+            experiment = mlflow.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
+            if experiment:
+                runs = mlflow.search_runs(
+                    experiment_ids=[experiment.experiment_id],
+                    filter_string="attributes.status = 'FINISHED'",
+                    order_by=["attributes.start_time DESC"],
+                    max_results=5
+                )
+                for _, run in runs.iterrows():
+                    try:
+                        print(f"Checking run {run.run_id} for model_package artifact...")
+                        mlflow.artifacts.download_artifacts(
+                            run_id=run.run_id,
+                            artifact_path="model_package/model.pkl",
+                            dst_path=SAVED_MODEL_DIR_NAME
+                        )
+                        # Move file if it's nested (mlflow sometimes creates subfolders)
+                        downloaded_file = os.path.join(SAVED_MODEL_DIR_NAME, "model_package", "model.pkl")
+                        if os.path.exists(downloaded_file):
+                            import shutil
+                            shutil.move(downloaded_file, SAVED_MODEL_FILE_PATH)
+                            shutil.rmtree(os.path.join(SAVED_MODEL_DIR_NAME, "model_package"))
+                        
+                        if os.path.exists(SAVED_MODEL_FILE_PATH):
+                            print(f"Successfully downloaded model to {SAVED_MODEL_FILE_PATH}")
+                            break
+                    except Exception:
+                        continue
+            else:
+                print(f"Experiment {MLFLOW_EXPERIMENT_NAME} not found.")
+        except Exception as e:
+            print(f"Error during model download: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Download model if missing
+    download_model()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="template")

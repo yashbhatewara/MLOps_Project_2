@@ -170,7 +170,12 @@ class ModelTrainer:
                 logging.info(f"Setting MLflow experiment: {exp_name}")
                 mlflow.set_experiment(exp_name)
 
-                with mlflow.start_run():
+                # If a run is already active (e.g., from TrainPipeline), use it.
+                # Otherwise, start a new one.
+                active_run = mlflow.active_run()
+                if active_run:
+                    logging.info(f"Using active MLflow run: {active_run.info.run_id}")
+                    # No context manager needed, just log to active run
                     mlflow.log_param("n_estimators", XGB_N_ESTIMATORS)
                     mlflow.log_param("learning_rate", XGB_LEARNING_RATE)
                     mlflow.log_param("max_depth", XGB_MAX_DEPTH)
@@ -181,6 +186,21 @@ class ModelTrainer:
                     mlflow.log_metric("mae", metric_artifact.mae)
 
                     mlflow.sklearn.log_model(model, "model")
+                    mlflow.log_artifact(self.model_trainer_config.trained_model_file_path, artifact_path="model_package")
+                else:
+                    logging.info("Starting new MLflow run")
+                    with mlflow.start_run():
+                        mlflow.log_param("n_estimators", XGB_N_ESTIMATORS)
+                        mlflow.log_param("learning_rate", XGB_LEARNING_RATE)
+                        mlflow.log_param("max_depth", XGB_MAX_DEPTH)
+                        mlflow.log_param("random_state", XGB_RANDOM_STATE)
+
+                        mlflow.log_metric("r2_score", metric_artifact.r2_score)
+                        mlflow.log_metric("rmse", metric_artifact.rmse)
+                        mlflow.log_metric("mae", metric_artifact.mae)
+
+                        mlflow.sklearn.log_model(model, "model")
+                        mlflow.log_artifact(self.model_trainer_config.trained_model_file_path, artifact_path="model_package")
 
                 logging.info("MLflow logging completed")
             except Exception as mlflow_err:

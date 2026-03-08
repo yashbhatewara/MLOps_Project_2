@@ -131,17 +131,27 @@ class TrainPipeline:
         This method of TrainPipeline class is responsible for running complete pipeline
         """
         try:
-            mlflow.set_experiment("default")
+            from src.constants import MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
+            import os
+            
+            # Use file: prefix for local tracking if URI is a folder
+            tracking_uri = MLFLOW_TRACKING_URI
+            if not tracking_uri.startswith(("http", "file")):
+                tracking_uri = f"file:///{os.path.abspath(tracking_uri)}"
+            
+            mlflow.set_tracking_uri(tracking_uri)
+            mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+            
             with mlflow.start_run():
                 data_ingestion_artifact = self.start_data_ingestion()
-                mlflow.log_param("data_ingestion", str(data_ingestion_artifact))
+                mlflow.log_param("data_ingestion", "Completed")
                 data_validation_artifact = self.start_data_validation(data_ingestion_artifact=data_ingestion_artifact)
-                mlflow.log_param("data_validation", str(data_validation_artifact))
+                mlflow.log_param("data_validation", data_validation_artifact.validation_status)
                 data_transformation_artifact = self.start_data_transformation(
                     data_ingestion_artifact=data_ingestion_artifact, data_validation_artifact=data_validation_artifact)
-                mlflow.log_param("data_transformation", str(data_transformation_artifact))
+                mlflow.log_param("data_transformation", "Completed")
                 model_trainer_artifact = self.start_model_trainer(data_transformation_artifact=data_transformation_artifact)
-                mlflow.log_param("model_trainer", str(model_trainer_artifact))
+                mlflow.log_param("model_trainer", "Completed")
 
                 # log acceptance status; do not raise
                 if not model_trainer_artifact.is_model_accepted:

@@ -59,7 +59,7 @@ MLFLOW_EXPERIMENT_NAME = "housing_price_prediction"
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 # convert port to int, default 8000
 try:
-    APP_PORT = int(os.getenv("APP_PORT", "8000"))
+    APP_PORT = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
 except ValueError:
     APP_PORT = 8000
 

@@ -37,3 +37,8 @@ class ModelEvaluationArtifact:
     previous_model_r2: float
     new_model_r2: float
     improvement: float
+
+@dataclass
+class ModelPusherArtifact:
+    saved_model_path: str
+    model_pusher_dir: str

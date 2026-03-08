@@ -6,7 +6,7 @@ from pandas import DataFrame
 from src.exception import MyException
 from src.logger import logging
 from src.utils.main_utils import load_object
-from src.constants import MODEL_FILE_NAME
+from src.constants import SAVED_MODEL_FILE_PATH
 
 
 class PropertyData:
@@ -18,7 +18,9 @@ class PropertyData:
         Sqft_per_bed,
         Total_Rooms,
         is_high_rise,
-        Location: str = ""
+        Location: str = "",
+        Type: str = "",
+        Furnishing: str = ""
     ):
         try:
             self.Area_in_sqft = Area_in_sqft
@@ -28,10 +30,13 @@ class PropertyData:
             self.Total_Rooms = Total_Rooms
             self.is_high_rise = is_high_rise
             self.Location = Location
+            self.Type = Type
+            self.Furnishing = Furnishing
         except Exception as e:
             raise MyException(e, sys)
 
     def get_property_data_as_dict(self):
+        # Return only features used by current model
         return {
             "Area_in_sqft": [self.Area_in_sqft],
             "Beds": [self.Beds],
@@ -48,7 +53,7 @@ class PropertyData:
 class PropertyPredictor:
     def __init__(self):
         try:
-            self.model_package = load_object(MODEL_FILE_NAME)
+            self.model_package = load_object(SAVED_MODEL_FILE_PATH)
             self.preprocessing_object = self.model_package["preprocessing_object"]
             self.model = self.model_package["trained_model"]
             self.location_encoding_map: dict = self.model_package.get("location_encoding_map", {})
@@ -56,7 +61,7 @@ class PropertyPredictor:
         except Exception as e:
             raise MyException(e, sys)
 
-    def predict(self, dataframe: DataFrame, location: str = ""):
+    def predict(self, dataframe: DataFrame, location: str):
         try:
             # Apply numeric preprocessing
             transformed = self.preprocessing_object.transform(dataframe)
@@ -69,7 +74,7 @@ class PropertyPredictor:
             transformed = np.hstack([transformed, location_arr])
 
             pred_log = self.model.predict(transformed)
-            prediction = np.expm1(pred_log)
+            prediction = float(np.expm1(pred_log)[0])
             return prediction
         except Exception as e:
             raise MyException(e, sys)

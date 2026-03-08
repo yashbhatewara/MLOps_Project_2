@@ -54,8 +54,13 @@ class ModelTrainerConfig:
     mlflow_experiment_name: str = os.getenv("MLFLOW_EXPERIMENT_NAME", MLFLOW_EXPERIMENT_NAME)
     
 @dataclass
+class ModelPusherConfig:
+    model_pusher_dir: str = os.path.join(training_pipeline_config.artifact_dir, "model_pusher")
+    saved_model_path: str = SAVED_MODEL_FILE_PATH
+
+@dataclass
 class VehiclePredictorConfig:
-    model_file_path: str = MODEL_FILE_NAME
+    model_file_path: str = SAVED_MODEL_FILE_PATH
     model_bucket_name: str = MODEL_BUCKET_NAME
 
 @dataclass
@@ -65,3 +70,8 @@ class ModelEvaluationConfig:
         "model_evaluation"
     )
     change_threshold: float = MODEL_EVALUATION_CHANGED_THRESHOLD_SCORE
+
+@dataclass
+class ModelPusherConfig:
+    model_pusher_dir: str = os.path.join(training_pipeline_config.artifact_dir, "model_pusher")
+    saved_model_path: str = SAVED_MODEL_FILE_PATH

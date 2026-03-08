@@ -28,6 +28,10 @@ MODEL_FILE_NAME: str = "model.pkl"
 MODEL_TRAINER_EXPECTED_R2_SCORE: float = 0.5
 MODEL_TRAINER_MODEL_CONFIG_FILE_PATH: str = os.path.join("config", "model.yaml")
 
+# Model Pusher Constants
+SAVED_MODEL_DIR_NAME: str = "saved_models"
+SAVED_MODEL_FILE_PATH: str = os.path.join(SAVED_MODEL_DIR_NAME, MODEL_FILE_NAME)
+
 # Unused constants but needed for compatibility in config_entity
 MODEL_BUCKET_NAME = "none"
 MODEL_EVALUATION_CHANGED_THRESHOLD_SCORE = 0.02

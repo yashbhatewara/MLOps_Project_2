@@ -188,6 +188,12 @@
     <div class="container">
         <h1>Rent Estimator</h1>
 
+        {% if error %}
+        <div style="background-color: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 1rem; border-radius: 0.75rem; margin-bottom: 1.5rem; font-size: 0.875rem;">
+            <strong>Notice:</strong> {{ error }}
+        </div>
+        {% endif %}
+
         <form action="/" method="post">
             <div class="form-grid">
 

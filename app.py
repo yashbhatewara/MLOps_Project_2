@@ -30,13 +30,27 @@ try:
     logger.info("DagsHub successfully initialized")
 except Exception as e:
     logger.warning(f"DagsHub initialization failed: {e}")
+    # Fallback to explicit URI if init fails
+    mlflow.set_tracking_uri("https://dagshub.com/yashbhatewara/MLOps_Project_2.mlflow")
 
 def download_model():
     if not os.path.exists(SAVED_MODEL_FILE_PATH):
         logger.info(f"Model not found at {SAVED_MODEL_FILE_PATH}. Attempting download from DagsHub...")
+        logger.info(f"Current MLflow Tracking URI: {mlflow.get_tracking_uri()}")
         os.makedirs(SAVED_MODEL_DIR_NAME, exist_ok=True)
         try:
             experiment = mlflow.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
+            if not experiment:
+                logger.warning(f"Experiment '{MLFLOW_EXPERIMENT_NAME}' not found. Listing all experiments...")
+                all_exps = mlflow.search_experiments()
+                for exp in all_exps:
+                    logger.info(f"Found experiment: {exp.name} (ID: {exp.experiment_id})")
+                
+                # Try to use the first non-default experiment found
+                if len(all_exps) > 0:
+                    experiment = all_exps[0]
+                    logger.info(f"Falling back to experiment: {experiment.name}")
+
             if experiment:
                 runs = mlflow.search_runs(
                     experiment_ids=[experiment.experiment_id],
@@ -110,6 +124,7 @@ class DataForm:
 
 
 @app.get("/", response_class=HTMLResponse)
+@app.head("/", response_class=HTMLResponse)
 async def index(request: Request, prediction: float | None = None):
     return templates.TemplateResponse(
         "rent_form.html",

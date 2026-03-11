@@ -25,13 +25,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Handle DagsHub Authentication
+dagshub_token = os.getenv("DAGSHUB_USER_TOKEN")
+if dagshub_token:
+    os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+    os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+    logger.info("DAGSHUB_USER_TOKEN found, configured MLflow authentication")
+else:
+    logger.warning("DAGSHUB_USER_TOKEN not found. Public repos might work, but private ones will fail.")
+
 try:
+    # Use the official DagsHub integration
     dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=True)
-    logger.info("DagsHub successfully initialized")
+    logger.info("DagsHub successfully initialized via dagshub.init")
 except Exception as e:
     logger.warning(f"DagsHub initialization failed: {e}")
     # Fallback to explicit URI if init fails
-    mlflow.set_tracking_uri("https://dagshub.com/yashbhatewara/MLOps_Project_2.mlflow")
+    tracking_url = "https://dagshub.com/yashbhatewara/MLOps_Project_2.mlflow"
+    mlflow.set_tracking_uri(tracking_url)
+    logger.info(f"Fallback tracking URI set to: {tracking_url}")
 
 def download_model():
     if not os.path.exists(SAVED_MODEL_FILE_PATH):

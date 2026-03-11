@@ -133,15 +133,48 @@ class TrainPipeline:
         try:
             from src.constants import MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
             import os
+            import dagshub
             
-            # Use file: prefix for local tracking if URI is a folder
-            tracking_uri = MLFLOW_TRACKING_URI
-            if not tracking_uri.startswith(("http", "file")):
-                tracking_uri = f"file:///{os.path.abspath(tracking_uri)}"
-            
-            mlflow.set_tracking_uri(tracking_uri)
+            # Clear any existing MLflow state to prevent "Run not found" errors
+            for key in ["MLFLOW_RUN_ID", "MLFLOW_TRACKING_URI", "MLFLOW_EXPERIMENT_ID"]:
+                if key in os.environ:
+                    logging.info(f"Clearing {key} from environment: {os.environ[key]}")
+                    del os.environ[key]
+
+            # Use DagsHub if token is provided, otherwise use local/manual URI
+            dagshub_token = os.getenv("DAGSHUB_USER_TOKEN")
+            if dagshub_token:
+                os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+                os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+                
+                tracking_uri = "https://dagshub.com/yashbhatewara/MLOps_Project_2.mlflow"
+                mlflow.set_tracking_uri(tracking_uri)
+                logging.info(f"Setting DagsHub tracking URI: {tracking_uri}")
+                
+                # Use dagshub.init for other features, but disable its automatic mlflow config
+                # as we handle it manually for better control.
+                try:
+                    dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=False)
+                except:
+                    pass
+            else:
+                from src.constants import MLFLOW_TRACKING_URI
+                tracking_uri = MLFLOW_TRACKING_URI
+                if not tracking_uri.startswith(("http", "file")):
+                    tracking_uri = f"file:///{os.path.abspath(tracking_uri)}"
+                mlflow.set_tracking_uri(tracking_uri)
+                logging.info(f"Using manual MLflow tracking URI: {tracking_uri}")
+
+            logging.info(f"Current Experiment Name: {MLFLOW_EXPERIMENT_NAME}")
             mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
             
+            # Diagnostic check
+            active_run = mlflow.active_run()
+            if active_run:
+                logging.warning(f"Unexpected active run found: {active_run.info.run_id}. Ending it.")
+                mlflow.end_run()
+            
+            logging.info("Calling mlflow.start_run() now...")
             with mlflow.start_run():
                 data_ingestion_artifact = self.start_data_ingestion()
                 mlflow.log_param("data_ingestion", "Completed")

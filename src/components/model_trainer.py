@@ -156,26 +156,31 @@ class ModelTrainer:
             # ------------------------------------------------------------------
             try:
                 logging.info("Logging to MLflow...")
-                uri = self.model_trainer_config.mlflow_tracking_uri
-                logging.info(f"Using MLflow tracking URI: {uri if uri else 'default (mlruns)'}")
-                if uri:
-                    # Using file: prefix makes MLflow more reliable with local folders
-                    tracking_uri = f"file:///{os.path.abspath(uri)}"
-                    logging.info(f"Setting MLflow tracking URI to: {tracking_uri}")
-                    mlflow.set_tracking_uri(tracking_uri)
-                    mlflow.set_registry_uri(tracking_uri)
 
-                # Explicitly set the experiment name to avoid defaulting to experiment ID 0
-                exp_name = self.model_trainer_config.mlflow_experiment_name
-                logging.info(f"Setting MLflow experiment: {exp_name}")
-                mlflow.set_experiment(exp_name)
-
-                # If a run is already active (e.g., from TrainPipeline), use it.
-                # Otherwise, start a new one.
+                # CRITICAL: Check for active run FIRST before touching any MLflow config.
+                # If a run is already active (e.g., opened by TrainPipeline pointing to DagsHub),
+                # do NOT call set_tracking_uri/set_experiment — it will reset the URI back
+                # to the local 'mlruns' folder, making the DagsHub run ID invalid.
                 active_run = mlflow.active_run()
+                logging.info(f"Active MLflow run: {active_run.info.run_id if active_run else 'None'}")
+                logging.info(f"Current tracking URI: {mlflow.get_tracking_uri()}")
+
+                if not active_run:
+                    # Only configure when standalone (no parent run from pipeline)
+                    uri = self.model_trainer_config.mlflow_tracking_uri
+                    if uri and not uri.startswith(("http", "file")):
+                        uri = f"file:///{os.path.abspath(uri)}"
+                    if uri:
+                        mlflow.set_tracking_uri(uri)
+                        mlflow.set_registry_uri(uri)
+                    exp_name = self.model_trainer_config.mlflow_experiment_name
+                    mlflow.set_experiment(exp_name)
+                    logging.info(f"Standalone mode: configured tracking to {uri}")
+                else:
+                    logging.info("Pipeline mode: skipping URI/experiment config, using parent run")
+
                 if active_run:
-                    logging.info(f"Using active MLflow run: {active_run.info.run_id}")
-                    # No context manager needed, just log to active run
+                    logging.info(f"Logging to existing run: {active_run.info.run_id}")
                     mlflow.log_param("n_estimators", XGB_N_ESTIMATORS)
                     mlflow.log_param("learning_rate", XGB_LEARNING_RATE)
                     mlflow.log_param("max_depth", XGB_MAX_DEPTH)
@@ -188,7 +193,7 @@ class ModelTrainer:
                     mlflow.sklearn.log_model(model, "model")
                     mlflow.log_artifact(self.model_trainer_config.trained_model_file_path, artifact_path="model_package")
                 else:
-                    logging.info("Starting new MLflow run")
+                    logging.info("Standalone mode: starting new MLflow run")
                     with mlflow.start_run():
                         mlflow.log_param("n_estimators", XGB_N_ESTIMATORS)
                         mlflow.log_param("learning_rate", XGB_LEARNING_RATE)

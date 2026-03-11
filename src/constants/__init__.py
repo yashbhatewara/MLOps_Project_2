@@ -51,9 +51,9 @@ XGB_RANDOM_STATE = 42
 # Target Column
 TARGET_COLUMN: str = "Monthly_Rent"
 
-# MLflow Constants — uses local mlruns directory for maximum reliability
-MLFLOW_TRACKING_URI = "mlruns" # Explicitly use local ./mlruns folder
-MLFLOW_EXPERIMENT_NAME = "housing_price_prediction"
+# MLflow Constants — defaults to local mlruns but can be overridden
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "mlruns")
+MLFLOW_EXPERIMENT_NAME = "housing_price_model_v1"
 
 # Web application settings (can be overridden via environment)
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")

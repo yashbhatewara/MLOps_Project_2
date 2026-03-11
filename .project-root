@@ -1,0 +1,1 @@
+# Anchor for from_root library to detect project root in Docker/Render environments.

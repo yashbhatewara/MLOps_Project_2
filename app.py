@@ -13,19 +13,27 @@ from src.pipeline.prediction_pipeline import PropertyData, PropertyPredictor
 from src.pipeline.training_pipeline import TrainPipeline
 from contextlib import asynccontextmanager
 import os
-
 import mlflow
 import threading
 import dagshub
+import logging
+
+# Configure logging for Render
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 try:
     dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=True)
+    logger.info("DagsHub successfully initialized")
 except Exception as e:
-    print(f"Warning: DagsHub initialization failed: {e}")
+    logger.warning(f"DagsHub initialization failed: {e}")
 
 def download_model():
     if not os.path.exists(SAVED_MODEL_FILE_PATH):
-        print(f"Model not found at {SAVED_MODEL_FILE_PATH}. Attempting download from DagsHub...")
+        logger.info(f"Model not found at {SAVED_MODEL_FILE_PATH}. Attempting download from DagsHub...")
         os.makedirs(SAVED_MODEL_DIR_NAME, exist_ok=True)
         try:
             experiment = mlflow.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
@@ -38,7 +46,7 @@ def download_model():
                 )
                 for _, run in runs.iterrows():
                     try:
-                        print(f"Checking run {run.run_id} for model_package artifact...")
+                        logger.info(f"Checking run {run.run_id} for model_package artifact...")
                         mlflow.artifacts.download_artifacts(
                             run_id=run.run_id,
                             artifact_path="model_package/model.pkl",
@@ -52,14 +60,15 @@ def download_model():
                             shutil.rmtree(os.path.join(SAVED_MODEL_DIR_NAME, "model_package"))
                         
                         if os.path.exists(SAVED_MODEL_FILE_PATH):
-                            print(f"Successfully downloaded model to {SAVED_MODEL_FILE_PATH}")
+                            logger.info(f"Successfully downloaded model to {SAVED_MODEL_FILE_PATH}")
                             break
-                    except Exception:
+                    except Exception as e:
+                        logger.error(f"Failed to check run {run.run_id}: {e}")
                         continue
             else:
-                print(f"Experiment {MLFLOW_EXPERIMENT_NAME} not found.")
+                logger.error(f"Experiment {MLFLOW_EXPERIMENT_NAME} not found.")
         except Exception as e:
-            print(f"Error during model download: {e}")
+            logger.error(f"Error during model download: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -89,9 +98,9 @@ class DataForm:
 
     async def get_property_data(self):
         form = await self.request.form()
-        self.Area_in_sqft = float(form.get("Area_in_sqft"))
-        self.Beds = int(form.get("Beds"))
-        self.Baths = int(form.get("Baths"))
+        self.Area_in_sqft = float(form.get("Area_in_sqft", 0))
+        self.Beds = int(form.get("Beds", 1))
+        self.Baths = int(form.get("Baths", 1))
         self.Sqft_per_bed = float(form.get("Sqft_per_bed", 0))
         self.Total_Rooms = int(form.get("Total_Rooms", 0))
         self.is_high_rise = int(form.get("is_high_rise", 0))
@@ -113,8 +122,16 @@ async def predict(request: Request):
     try:
         form = DataForm(request)
         await form.get_property_data()
+        logger.info(f"Received prediction request for location: {form.Location}")
 
-        # Re-compute derived features if not provided (though JS adds them)
+        if not os.path.exists(SAVED_MODEL_FILE_PATH):
+            logger.warning("Model file not found. It might be downloading.")
+            return templates.TemplateResponse(
+                "rent_form.html",
+                {"request": request, "error": "Model is still downloading from DagsHub. Please wait a minute and refresh."}
+            )
+
+        # Re-compute derived features
         sqft_per_bed = form.Area_in_sqft / max(form.Beds, 1)
         total_rooms = form.Beds + form.Baths
 
@@ -137,19 +154,22 @@ async def predict(request: Request):
         
         import math
         prediction = math.ceil(prediction)
+        logger.info(f"Prediction successful: {prediction}")
 
-        # store prediction in query param
-        return RedirectResponse(
-            url=f"/?prediction={prediction}",
-            status_code=303
+        # Render template directly instead of redirecting
+        return templates.TemplateResponse(
+            "rent_form.html",
+            {"request": request, "prediction": prediction}
         )
 
     except Exception as e:
         import traceback
-        error_msg = str(e)
-        if "No such file or directory" in error_msg and "model.pkl" in error_msg:
-            return {"error": "Model is still downloading from DagsHub. Please wait a minute and refresh the page."}
-        return {"error": f"Error occurred in python script: [{e}]", "traceback": traceback.format_exc()}
+        logger.error(f"Error during prediction: {e}")
+        logger.error(traceback.format_exc())
+        return templates.TemplateResponse(
+            "rent_form.html",
+            {"request": request, "error": f"Error occurred: {str(e)}"}
+        )
 
 
 if __name__ == "__main__":

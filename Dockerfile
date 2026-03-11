@@ -6,5 +6,5 @@ RUN apt update -y && apt install awscli -y
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-# Use Gunicorn with Uvicorn workers for FastAPI compatibility
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker app:app
+# Use Uvicorn directly for better compatibility on Render
+CMD uvicorn app:app --host 0.0.0.0 --port $PORT

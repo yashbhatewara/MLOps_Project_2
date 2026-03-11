@@ -16,7 +16,12 @@ import os
 
 import mlflow
 import threading
-dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=True)
+import dagshub
+
+try:
+    dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=True)
+except Exception as e:
+    print(f"Warning: DagsHub initialization failed: {e}")
 
 def download_model():
     if not os.path.exists(SAVED_MODEL_FILE_PATH):

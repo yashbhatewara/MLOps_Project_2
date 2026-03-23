@@ -43,6 +43,7 @@ class DataTransformationConfig:
 class ModelTrainerConfig:
     model_trainer_dir: str = os.path.join(training_pipeline_config.artifact_dir, MODEL_TRAINER_DIR_NAME)
     trained_model_file_path: str = os.path.join(model_trainer_dir, MODEL_TRAINER_TRAINED_MODEL_DIR, MODEL_FILE_NAME)
+    visualizations_dir: str = os.path.join(model_trainer_dir, "visualizations")
     # this value can be overridden by setting an environment variable
     # e.g. in production: export MODEL_TRAINER_EXPECTED_R2_SCORE=0.5
     expected_r2_score: float = float(os.getenv("MODEL_TRAINER_EXPECTED_R2_SCORE", MODEL_TRAINER_EXPECTED_R2_SCORE))

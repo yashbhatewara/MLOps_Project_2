@@ -129,71 +129,118 @@ class TrainPipeline:
     def run_pipeline(self) -> None:
         """
         This method of TrainPipeline class is responsible for running complete pipeline
+        and logging results to both local and (if provided) DagsHub remote.
         """
         try:
             from src.constants import MLFLOW_EXPERIMENT_NAME, MLFLOW_TRACKING_URI
             import os
             import dagshub
             
-            # Clear any existing MLflow state to prevent "Run not found" errors
+            # --- PHASE 1: PREPARATION ---
+            # Clear any existing MLflow environment state
             for key in ["MLFLOW_RUN_ID", "MLFLOW_TRACKING_URI", "MLFLOW_EXPERIMENT_ID"]:
                 if key in os.environ:
-                    logging.info(f"Clearing {key} from environment: {os.environ[key]}")
                     del os.environ[key]
 
-            # Use DagsHub if token is provided, otherwise use local/manual URI
+            # Determine logging targets
+            tracking_targets = []
+            
+            # 1. Local logging is always enabled
+            local_uri = MLFLOW_TRACKING_URI
+            if not local_uri.startswith(("http", "file")):
+                local_uri = f"file:///{os.path.abspath(local_uri)}"
+            tracking_targets.append(("Local", local_uri))
+
+            # 2. DagsHub logging if token exists
             dagshub_token = os.getenv("DAGSHUB_USER_TOKEN")
             if dagshub_token:
                 os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
                 os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+                remote_uri = "https://dagshub.com/yashbhatewara/MLOps_Project_2.mlflow"
+                tracking_targets.append(("DagsHub", remote_uri))
                 
-                tracking_uri = "https://dagshub.com/yashbhatewara/MLOps_Project_2.mlflow"
-                mlflow.set_tracking_uri(tracking_uri)
-                logging.info(f"Setting DagsHub tracking URI: {tracking_uri}")
-                
-                # Use dagshub.init for other features, but disable its automatic mlflow config
-                # as we handle it manually for better control.
                 try:
                     dagshub.init(repo_owner='yashbhatewara', repo_name='MLOps_Project_2', mlflow=False)
                 except:
                     pass
-            else:
-                from src.constants import MLFLOW_TRACKING_URI
-                tracking_uri = MLFLOW_TRACKING_URI
-                if not tracking_uri.startswith(("http", "file")):
-                    tracking_uri = f"file:///{os.path.abspath(tracking_uri)}"
-                mlflow.set_tracking_uri(tracking_uri)
-                logging.info(f"Using manual MLflow tracking URI: {tracking_uri}")
 
-            logging.info(f"Current Experiment Name: {MLFLOW_EXPERIMENT_NAME}")
+            # --- PHASE 2: CORE EXECUTION (Run ONCE) ---
+            # Ingestion -> Validation -> Transformation -> Training
+            data_ingestion_artifact = self.start_data_ingestion()
+            data_validation_artifact = self.start_data_validation(data_ingestion_artifact=data_ingestion_artifact)
+            data_transformation_artifact = self.start_data_transformation(
+                data_ingestion_artifact=data_ingestion_artifact, 
+                data_validation_artifact=data_validation_artifact
+            )
+            
+            # This will log to whatever is currently set as tracking URI (we set Local first)
+            mlflow.set_tracking_uri(tracking_targets[0][1])
             mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
             
-            # Diagnostic check
-            active_run = mlflow.active_run()
-            if active_run:
-                logging.warning(f"Unexpected active run found: {active_run.info.run_id}. Ending it.")
-                mlflow.end_run()
-            
-            logging.info("Calling mlflow.start_run() now...")
-            with mlflow.start_run():
-                data_ingestion_artifact = self.start_data_ingestion()
-                mlflow.log_param("data_ingestion", "Completed")
-                data_validation_artifact = self.start_data_validation(data_ingestion_artifact=data_ingestion_artifact)
-                mlflow.log_param("data_validation", data_validation_artifact.validation_status)
-                data_transformation_artifact = self.start_data_transformation(
-                    data_ingestion_artifact=data_ingestion_artifact, data_validation_artifact=data_validation_artifact)
-                mlflow.log_param("data_transformation", "Completed")
-                model_trainer_artifact = self.start_model_trainer(data_transformation_artifact=data_transformation_artifact)
-                mlflow.log_param("model_trainer", "Completed")
+            model_trainer_artifact = self.start_model_trainer(data_transformation_artifact=data_transformation_artifact)
 
-                # log acceptance status; do not raise
-                if not model_trainer_artifact.is_model_accepted:
-                    mlflow.log_metric("model_accepted", 0)
-                    logging.warning("Model did not meet acceptance threshold; continuing pipeline without error")
-                else:
-                    mlflow.log_metric("model_accepted", 1)
-                    model_pusher_artifact = self.start_model_pusher(model_trainer_artifact=model_trainer_artifact)
-                    logging.info(f"Model pushed. Artifact: {model_pusher_artifact}")
+            # Model rejection check
+            if not model_trainer_artifact.is_model_accepted:
+                logging.warning("Model did not meet acceptance threshold; continuing to log metrics anyway")
+            else:
+                model_pusher_artifact = self.start_model_pusher(model_trainer_artifact=model_trainer_artifact)
+                logging.info(f"Model pushed locally. Artifact: {model_pusher_artifact}")
+
+            # --- PHASE 3: DUAL LOGGING ---
+            # Now iterate through targets and ensure everything is logged
+            from src.constants import (XGB_N_ESTIMATORS, XGB_LEARNING_RATE, XGB_MAX_DEPTH, 
+                                      XGB_RANDOM_STATE)
+            from src.utils.main_utils import load_object
+
+            for name, uri in tracking_targets:
+                logging.info(f"Logging results to {name} MLflow at {uri}...")
+                mlflow.set_tracking_uri(uri)
+                mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+                
+                with mlflow.start_run(run_name=f"Pipeline_{name}"):
+                    # 1. Component Status Params
+                    mlflow.log_param("data_ingestion", "Completed")
+                    mlflow.log_param("data_validation", data_validation_artifact.validation_status)
+                    mlflow.log_param("data_transformation", "Completed")
+                    mlflow.log_param("model_trainer", "Completed")
+                    
+                    # 2. Hyperparameters
+                    mlflow.log_params({
+                        "n_estimators": XGB_N_ESTIMATORS,
+                        "learning_rate": XGB_LEARNING_RATE,
+                        "max_depth": XGB_MAX_DEPTH,
+                        "random_state": XGB_RANDOM_STATE
+                    })
+
+                    # 3. Metrics
+                    metrics = model_trainer_artifact.metric_artifact
+                    mlflow.log_metrics({
+                        "r2_score": metrics.r2_score,
+                        "rmse": metrics.rmse,
+                        "mae": metrics.mae,
+                        "model_accepted": 1 if model_trainer_artifact.is_model_accepted else 0
+                    })
+
+                    # 4. Model Registry & Artifacts
+                    # Load the model package to log it formally
+                    model_pkg = load_object(model_trainer_artifact.trained_model_file_path)
+                    model_obj = model_pkg["trained_model"]
+                    
+                    mlflow.sklearn.log_model(
+                        model_obj, 
+                        "model", 
+                        registered_model_name="housing_price_model"
+                    )
+                    mlflow.log_artifact(model_trainer_artifact.trained_model_file_path, artifact_path="model_package")
+                    
+                    # 5. Visualizations
+                    import os
+                    viz_dir = getattr(model_trainer_artifact, "visualizations_dir", None)
+                    if viz_dir and os.path.exists(viz_dir):
+                        logging.info(f"Syncing plots from {viz_dir} to {name}")
+                        mlflow.log_artifacts(viz_dir, artifact_path="plots")
+                    
+                    logging.info(f"Successfully synced results to {name}")
 
         except Exception as e:
             raise MyException(e, sys)

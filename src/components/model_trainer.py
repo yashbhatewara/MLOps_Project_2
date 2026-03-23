@@ -1,6 +1,9 @@
+import os
 import sys
-from typing import Tuple
+import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
+from typing import Tuple
 from xgboost import XGBRegressor
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 import mlflow
@@ -27,13 +30,67 @@ class ModelTrainer:
         self.model_trainer_config = model_trainer_config
 
     # ------------------------------------------------------------------
+    # Generate Plots
+    # ------------------------------------------------------------------
+    def generate_eval_visualizations(self, y_true, y_pred, model, X_test):
+        try:
+            plots_dir = self.model_trainer_config.visualizations_dir
+            os.makedirs(plots_dir, exist_ok=True)
+            logging.info(f"Generating evaluation plots in {plots_dir}")
+
+            # 1. Actual vs Predicted Plot
+            plt.figure(figsize=(10, 6))
+            sns.scatterplot(x=y_true, y=y_pred, alpha=0.5)
+            plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], '--r', linewidth=2)
+            plt.xlabel("Actual Price")
+            plt.ylabel("Predicted Price")
+            plt.title("Actual vs Predicted Housing Prices")
+            plt.tight_layout()
+            actual_vs_pred_path = os.path.join(plots_dir, "actual_vs_predicted.png")
+            plt.savefig(actual_vs_pred_path)
+            plt.close()
+
+            # 2. Residuals Plot
+            residuals = y_true - y_pred
+            plt.figure(figsize=(10, 6))
+            sns.scatterplot(x=y_pred, y=residuals, alpha=0.5)
+            plt.axhline(y=0, color='r', linestyle='--')
+            plt.xlabel("Predicted Price")
+            plt.ylabel("Residuals")
+            plt.title("Residuals vs Predicted")
+            plt.tight_layout()
+            residuals_path = os.path.join(plots_dir, "residuals_plot.png")
+            plt.savefig(residuals_path)
+            plt.close()
+
+            # 3. Feature Importance Plot
+            plt.figure(figsize=(12, 8))
+            importances = model.feature_importances_
+            indices = np.argsort(importances)[-15:]  # Top 15 features
+            plt.barh(range(len(indices)), importances[indices], align='center')
+            plt.yticks(range(len(indices)), [f"Feature_{i}" for i in indices])
+            plt.xlabel("Importance Score")
+            plt.title("Top 15 Feature Importances")
+            plt.tight_layout()
+            feature_imp_path = os.path.join(plots_dir, "feature_importance.png")
+            plt.savefig(feature_imp_path)
+            plt.close()
+
+            logging.info("Evaluation plots saved successfully")
+            return plots_dir
+
+        except Exception as e:
+            logging.warning(f"Plot generation failed: {e}")
+            return None
+
+    # ------------------------------------------------------------------
     # Train Model & Generate Report
     # ------------------------------------------------------------------
     def get_model_object_and_report(
         self,
         train: np.array,
         test: np.array
-    ) -> Tuple[object, RegressionMetricArtifact]:
+    ) -> Tuple[object, RegressionMetricArtifact, np.array, np.array, np.array]:
 
         try:
             logging.info("Splitting input and target columns")
@@ -84,7 +141,7 @@ class ModelTrainer:
                 mae=mae
             )
 
-            return model, metric_artifact
+            return model, metric_artifact, y_test, y_test_pred, X_test
 
         except Exception as e:
             raise MyException(e, sys) from e
@@ -109,9 +166,17 @@ class ModelTrainer:
 
             logging.info("Train & Test arrays loaded")
 
-            model, metric_artifact = self.get_model_object_and_report(
+            model, metric_artifact, y_test, y_test_pred, X_test = self.get_model_object_and_report(
                 train=train_arr,
                 test=test_arr
+            )
+
+            # Generate and save visualizations
+            visualizations_dir = self.generate_eval_visualizations(
+                y_true=y_test, 
+                y_pred=y_test_pred, 
+                model=model, 
+                X_test=X_test
             )
 
             logging.info("Model training and evaluation completed")
@@ -157,10 +222,6 @@ class ModelTrainer:
             try:
                 logging.info("Logging to MLflow...")
 
-                # CRITICAL: Check for active run FIRST before touching any MLflow config.
-                # If a run is already active (e.g., opened by TrainPipeline pointing to DagsHub),
-                # do NOT call set_tracking_uri/set_experiment — it will reset the URI back
-                # to the local 'mlruns' folder, making the DagsHub run ID invalid.
                 active_run = mlflow.active_run()
                 logging.info(f"Active MLflow run: {active_run.info.run_id if active_run else 'None'}")
                 logging.info(f"Current tracking URI: {mlflow.get_tracking_uri()}")
@@ -181,31 +242,45 @@ class ModelTrainer:
 
                 if active_run:
                     logging.info(f"Logging to existing run: {active_run.info.run_id}")
-                    mlflow.log_param("n_estimators", XGB_N_ESTIMATORS)
-                    mlflow.log_param("learning_rate", XGB_LEARNING_RATE)
-                    mlflow.log_param("max_depth", XGB_MAX_DEPTH)
-                    mlflow.log_param("random_state", XGB_RANDOM_STATE)
+                    mlflow.log_params({
+                        "n_estimators": XGB_N_ESTIMATORS,
+                        "learning_rate": XGB_LEARNING_RATE,
+                        "max_depth": XGB_MAX_DEPTH,
+                        "random_state": XGB_RANDOM_STATE
+                    })
 
-                    mlflow.log_metric("r2_score", metric_artifact.r2_score)
-                    mlflow.log_metric("rmse", metric_artifact.rmse)
-                    mlflow.log_metric("mae", metric_artifact.mae)
+                    mlflow.log_metrics({
+                        "r2_score": metric_artifact.r2_score,
+                        "rmse": metric_artifact.rmse,
+                        "mae": metric_artifact.mae
+                    })
 
-                    mlflow.sklearn.log_model(model, "model")
+                    mlflow.sklearn.log_model(model, "model", registered_model_name="housing_price_model")
                     mlflow.log_artifact(self.model_trainer_config.trained_model_file_path, artifact_path="model_package")
+                    
+                    if visualizations_dir and os.path.exists(visualizations_dir):
+                        mlflow.log_artifacts(visualizations_dir, artifact_path="plots")
                 else:
                     logging.info("Standalone mode: starting new MLflow run")
                     with mlflow.start_run():
-                        mlflow.log_param("n_estimators", XGB_N_ESTIMATORS)
-                        mlflow.log_param("learning_rate", XGB_LEARNING_RATE)
-                        mlflow.log_param("max_depth", XGB_MAX_DEPTH)
-                        mlflow.log_param("random_state", XGB_RANDOM_STATE)
+                        mlflow.log_params({
+                            "n_estimators": XGB_N_ESTIMATORS,
+                            "learning_rate": XGB_LEARNING_RATE,
+                            "max_depth": XGB_MAX_DEPTH,
+                            "random_state": XGB_RANDOM_STATE
+                        })
 
-                        mlflow.log_metric("r2_score", metric_artifact.r2_score)
-                        mlflow.log_metric("rmse", metric_artifact.rmse)
-                        mlflow.log_metric("mae", metric_artifact.mae)
+                        mlflow.log_metrics({
+                            "r2_score": metric_artifact.r2_score,
+                            "rmse": metric_artifact.rmse,
+                            "mae": metric_artifact.mae
+                        })
 
-                        mlflow.sklearn.log_model(model, "model")
+                        mlflow.sklearn.log_model(model, "model", registered_model_name="housing_price_model")
                         mlflow.log_artifact(self.model_trainer_config.trained_model_file_path, artifact_path="model_package")
+                        
+                        if visualizations_dir and os.path.exists(visualizations_dir):
+                            mlflow.log_artifacts(visualizations_dir, artifact_path="plots")
 
                 logging.info("MLflow logging completed")
             except Exception as mlflow_err:
@@ -214,7 +289,8 @@ class ModelTrainer:
             model_trainer_artifact = ModelTrainerArtifact(
                 trained_model_file_path=self.model_trainer_config.trained_model_file_path,
                 metric_artifact=metric_artifact,
-                is_model_accepted=is_accepted
+                is_model_accepted=is_accepted,
+                visualizations_dir=visualizations_dir or self.model_trainer_config.visualizations_dir
             )
 
             logging.info(f"ModelTrainerArtifact: {model_trainer_artifact}")
